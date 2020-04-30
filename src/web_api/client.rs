@@ -1,23 +1,23 @@
 use super::domain::UserInfo;
-use super::response::{ ApiResponse, UserInfoResponse, UserInfoError };
+use super::response::{ApiResponse, UserInfoError, UserInfoResponse};
 
 pub struct Client {
     api_url: String,
-    pub version: i8
+    pub version: i8,
 }
 
 impl Client {
     pub fn new() -> Client {
         Client {
             api_url: "https://www.instagram.com".into(),
-            version: 0
+            version: 0,
         }
     }
 
     pub fn new_with_url(url: &str) -> Client {
         Client {
             api_url: url.into(),
-            version: 0
+            version: 0,
         }
     }
 
@@ -37,7 +37,9 @@ impl Client {
         let endpoint = format!("{}/{}", self.api_url, username);
         let client = reqwest::Client::new();
 
-        client.get(&endpoint).query(&[( "__a", "1" )])
+        client
+            .get(&endpoint)
+            .query(&[("__a", "1")])
             .send()
             .await?
             .json::<ApiResponse<UserInfoResponse>>()

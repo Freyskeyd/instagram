@@ -17,7 +17,8 @@ fn test_create_client() {
 
 #[tokio::test]
 async fn test_get_user_info() {
-    let fixture: String = ::std::fs::read_to_string("tests/web_api_client/response_user_info.json").unwrap();
+    let fixture: String =
+        ::std::fs::read_to_string("tests/web_api_client/response_user_info.json").unwrap();
     let m = mock("GET", "/Freyskeyd")
         .match_query(Matcher::UrlEncoded("__a".into(), "1".into()))
         .with_status(200)
@@ -32,7 +33,6 @@ async fn test_get_user_info() {
 
     assert_eq!(freyskeyd_info.username, "freyskeyd");
     assert_eq!(freyskeyd_info.full_name, "FREYSKEYD");
-
 
     let m = mock("GET", "/Freyskeyd")
         .match_query(Matcher::UrlEncoded("__a".into(), "1".into()))
