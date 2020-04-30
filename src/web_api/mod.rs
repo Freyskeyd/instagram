@@ -1,4 +1,4 @@
-mod domain;
 mod client;
-mod response;
+mod domain;
 pub mod prelude;
+mod response;

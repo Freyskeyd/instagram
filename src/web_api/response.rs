@@ -10,16 +10,15 @@ impl std::convert::From<reqwest::Error> for UserInfoError {
 #[derive(Debug)]
 pub enum UserInfoError {
     NotFound,
-    Other
+    Other,
 }
 
 #[derive(Deserialize)]
 pub struct ApiResponse<T> {
-    pub graphql: T
+    pub graphql: T,
 }
 
 #[derive(Deserialize)]
 pub struct UserInfoResponse {
-    pub user: UserInfo
+    pub user: UserInfo,
 }
-
