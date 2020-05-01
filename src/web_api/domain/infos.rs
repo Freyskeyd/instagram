@@ -2,8 +2,9 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize)]
-pub struct UserInfo {
+pub struct UserInfos {
     pub biography: String,
     pub blocked_by_viewer: bool,
     pub restricted_by_viewer: Option<bool>,
@@ -34,4 +35,14 @@ pub struct UserInfo {
 
     #[serde(flatten)]
     extra: HashMap<String, Value>,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginInfos {
+    authenticated: bool,
+    user: bool,
+    user_id: String,
+    one_tap_prompt: bool,
+    status: String,
 }

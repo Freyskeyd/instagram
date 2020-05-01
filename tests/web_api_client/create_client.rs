@@ -1,24 +1,28 @@
 extern crate instagram;
 
+lazy_static! {
+    static ref INSTAGRAM_USERNAME: String = {
+        std::env::var("INSTAGRAM_USERNAME")
+            .expect("You need to define INSTAGRAM_USERNAME environment variable.")
+    };
+    static ref INSTAGRAM_PASSWORD: String = {
+        std::env::var("INSTAGRAM_PASSWORD")
+            .expect("You need to define INSTAGRAM_PASSWORD environment variable.")
+    };
+}
+
 use mockito::mock;
 use mockito::Matcher;
 
-use instagram::web_api::prelude::*;
-
-#[test]
-fn test_create_client() {
-    let client: Client = Client::new();
-
-    assert_eq!(client.version, 0);
-    assert_eq!(client.is_authenticated(), false);
-    assert_eq!(client.authenticated_user_id(), "");
-    assert_eq!(client.authenticated_user_name(), "");
-}
+use instagram::web_api::Client;
+use instagram::web_api::ClientError;
+use instagram::web_api::Credentials;
 
 #[tokio::test]
 async fn test_get_user_info() {
     let fixture: String =
         ::std::fs::read_to_string("tests/web_api_client/response_user_info.json").unwrap();
+
     let m = mock("GET", "/Freyskeyd")
         .match_query(Matcher::UrlEncoded("__a".into(), "1".into()))
         .with_status(200)
@@ -26,13 +30,13 @@ async fn test_get_user_info() {
         .expect(1)
         .create();
 
-    let client: Client = Client::new_with_url(&mockito::server_url());
-    let freyskeyd_info = client.user_info("Freyskeyd").await.unwrap();
+    let client = Client::new_with_url(&mockito::server_url());
+    let freyskeyd_infos = client.user_infos("Freyskeyd").await.unwrap();
 
     m.assert();
 
-    assert_eq!(freyskeyd_info.username, "freyskeyd");
-    assert_eq!(freyskeyd_info.full_name, "FREYSKEYD");
+    assert_eq!(freyskeyd_infos.username, "freyskeyd");
+    assert_eq!(freyskeyd_infos.full_name, "FREYSKEYD");
 
     let m = mock("GET", "/Freyskeyd")
         .match_query(Matcher::UrlEncoded("__a".into(), "1".into()))
@@ -40,9 +44,73 @@ async fn test_get_user_info() {
         .expect(1)
         .create();
 
-    let client: Client = Client::new_with_url(&mockito::server_url());
-    let freyskeyd_info = client.user_info("Freyskeyd").await;
+    let client = Client::new_with_url(&mockito::server_url());
+    let freyskeyd_infos = client.user_infos("Freyskeyd").await;
 
-    assert!(freyskeyd_info.is_err());
+    assert!(freyskeyd_infos.is_err());
     m.assert();
+}
+
+#[tokio::test]
+async fn test_logged_in_2_fa() {
+    let fixture: String =
+        ::std::fs::read_to_string("tests/web_api_client/response_login_2FA.json").unwrap();
+
+    let fixture_init_rollout_hash: String =
+        ::std::fs::read_to_string("tests/web_api_client/response_init_rollout.html").unwrap();
+
+    let m_root = mock("GET", "/")
+        .with_body(fixture_init_rollout_hash)
+        .with_status(200)
+        .expect(1)
+        .create();
+
+    let m_login = mock("POST", "/accounts/login/ajax/")
+        .with_status(400)
+        .with_body(&fixture)
+        .expect(1)
+        .create();
+
+    let mut client = Client::new_with_url(&mockito::server_url());
+    let x = client.login(&get_credentials()).await;
+
+    assert_eq!(Err(ClientError::UnableToPerform2FA), x);
+
+    m_root.assert();
+    m_login.assert();
+}
+
+#[tokio::test]
+async fn test_logged_in() {
+    let fixture = "{\"authenticated\": true, \"user\": true, \"userId\": \"8343444274\", \"oneTapPrompt\": false, \"status\": \"ok\"}";
+
+    let fixture_init_rollout_hash: String =
+        ::std::fs::read_to_string("tests/web_api_client/response_init_rollout.html").unwrap();
+
+    let m_root = mock("GET", "/")
+        .with_body(fixture_init_rollout_hash)
+        .with_status(200)
+        .expect(1)
+        .create();
+
+    let m_login = mock("POST", "/accounts/login/ajax/")
+        .with_status(200)
+        .with_body(fixture)
+        .expect(1)
+        .create();
+
+    let mut client = Client::new_with_url(&mockito::server_url());
+    let x: Result<_, _> = client.login(&get_credentials()).await;
+
+    assert!(x.is_ok());
+
+    m_root.assert();
+    m_login.assert();
+}
+
+fn get_credentials() -> Credentials<'static> {
+    Credentials {
+        username: &INSTAGRAM_USERNAME,
+        password: &INSTAGRAM_PASSWORD,
+    }
 }
