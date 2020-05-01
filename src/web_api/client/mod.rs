@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+
 use headers::{HeaderMap, HeaderValue};
 use regex::Regex;
 use reqwest::header as headers;
@@ -6,6 +8,7 @@ use reqwest::Error as HttpError;
 use reqwest::Response as HttpResponse;
 
 use crate::web_api::{
+    behaviour::FetchUserInfo,
     credentials::Credentials,
     domain::UserInfos,
     error::ClientError,
@@ -54,6 +57,39 @@ pub struct Client {
     rollout_hash: Option<String>,
 }
 
+#[async_trait]
+impl FetchUserInfo for Client {
+    /// Fetch user's informations
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use instagram::web_api::*;
+    ///
+    /// let client = Client::new();
+    ///
+    /// //let some_user_info: UserInfos = client.user_infos("SomeUser").await?;
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the request fails on instagram api.
+    async fn user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
+        let endpoint = format!("{}/{}", self.api_url, username);
+        let client = HttpClient::new();
+
+        client
+            .get(&endpoint)
+            .query(&[("__a", "1")])
+            .send()
+            .await?
+            .json::<ApiResponse<UserInfosResponse>>()
+            .await
+            .map(|r| r.graphql.user)
+            .map_err(Into::into)
+    }
+}
+
 impl std::default::Default for Client {
     fn default() -> Self {
         ClientBuilder::new().build()
@@ -87,35 +123,6 @@ impl Client {
         &self.api_url
     }
 
-    /// Fetch user's informations
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use instagram::web_api::*;
-    ///
-    /// let client = Client::new();
-    ///
-    /// //let some_user_info: UserInfos = client.user_infos("SomeUser").await?;
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if the request fails on instagram api.
-    pub async fn user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
-        let endpoint = format!("{}/{}", self.api_url, username);
-        let client = HttpClient::new();
-
-        client
-            .get(&endpoint)
-            .query(&[("__a", "1")])
-            .send()
-            .await?
-            .json::<ApiResponse<UserInfosResponse>>()
-            .await
-            .map(|r| r.graphql.user)
-            .map_err(Into::into)
-    }
     /// Login with provided credentials
     ///
     /// # Examples
@@ -138,7 +145,7 @@ impl Client {
     /// Will return `Err` if the request fails on instagram api.
     /// Maybe due to an unknown error or a mistake in the credentials
     pub async fn login(
-        &mut self,
+        mut self,
         credentials: &Credentials<'_>,
     ) -> Result<AuthenticatedClient, ClientError> {
         self.init_rollout_hash().await?;
@@ -237,7 +244,7 @@ impl Client {
                 Regex::new(r#"csrf_token":"(?P<csrf_token>[A-Za-z0-9]+)"#).unwrap();
         }
 
-        let rollout_hash: Option<&str> = RE_ROLLOUT_HASH
+        let _rollout_hash: Option<&str> = RE_ROLLOUT_HASH
             .captures(&body)
             .and_then(|cap| cap.name("rollout_hash").map(|v| v.as_str()));
 
@@ -252,7 +259,7 @@ impl Client {
         if self.csrf_token.is_none() {
             Err(ClientError::UnableToGetCsrfToken)
         } else {
-            println!("rollout: {:?}, csrf: {:?}", rollout_hash, self.csrf_token);
+            // println!("rollout: {:?}, csrf: {:?}", rollout_hash, self.csrf_token);
 
             Ok(())
         }

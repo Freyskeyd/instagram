@@ -14,6 +14,7 @@ lazy_static! {
 use mockito::mock;
 use mockito::Matcher;
 
+use instagram::web_api::behaviour::*;
 use instagram::web_api::Client;
 use instagram::web_api::ClientError;
 use instagram::web_api::Credentials;
@@ -71,8 +72,9 @@ async fn test_logged_in_2_fa() {
         .expect(1)
         .create();
 
-    let mut client = Client::new_with_url(&mockito::server_url());
-    let x = client.login(&get_credentials()).await;
+    let x = Client::new_with_url(&mockito::server_url())
+        .login(&get_credentials())
+        .await;
 
     assert_eq!(Err(ClientError::UnableToPerform2FA), x);
 
@@ -87,6 +89,9 @@ async fn test_logged_in() {
     let fixture_init_rollout_hash: String =
         ::std::fs::read_to_string("tests/web_api_client/response_init_rollout.html").unwrap();
 
+    let fixture_infos: String =
+        ::std::fs::read_to_string("tests/web_api_client/response_user_info.json").unwrap();
+
     let m_root = mock("GET", "/")
         .with_body(fixture_init_rollout_hash)
         .with_status(200)
@@ -99,13 +104,25 @@ async fn test_logged_in() {
         .expect(1)
         .create();
 
-    let mut client = Client::new_with_url(&mockito::server_url());
-    let x: Result<_, _> = client.login(&get_credentials()).await;
+    let m_user_info = mock("GET", "/Freyskeyd")
+        .match_query(Matcher::UrlEncoded("__a".into(), "1".into()))
+        .with_status(200)
+        .with_body(&fixture_infos)
+        .expect(1)
+        .create();
 
-    assert!(x.is_ok());
+    let client = Client::new_with_url(&mockito::server_url())
+        .login(&get_credentials())
+        .await
+        .unwrap();
+    let freyskeyd_infos = client.user_infos("Freyskeyd").await.unwrap();
+
+    assert_eq!(freyskeyd_infos.username, "freyskeyd");
+    assert_eq!(freyskeyd_infos.full_name, "FREYSKEYD");
 
     m_root.assert();
     m_login.assert();
+    m_user_info.assert();
 }
 
 fn get_credentials() -> Credentials<'static> {
