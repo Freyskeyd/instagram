@@ -1,5 +1,14 @@
+# Changelog
+
 All notable changes to this project will be documented in this file.
+
 We follow the [Semantic Versioning 2.0.0](http://semver.org/) format.
+
+## [Unreleased]
+
+### Added
+
+- Introduce `behaviour` concept on client
 
 
 ## x.y.z - YYYY-MM-DD
@@ -15,3 +24,6 @@ We follow the [Semantic Versioning 2.0.0](http://semver.org/) format.
 
 ### Fixed
 - Nothing.
+
+
+[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v1.0.0...HEAD
