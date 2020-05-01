@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize)]
 pub struct UserInfos {
     pub biography: String,

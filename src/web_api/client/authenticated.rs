@@ -14,6 +14,9 @@ pub struct AuthenticatedClient {
 }
 
 impl AuthenticatedClient {
+    /// # Errors
+    ///
+    /// Will return `Err` if login informations isnt validated.
     pub fn from_login_infos(client: &Client, _login_info: &LoginInfos) -> Result<Self, Error> {
         Ok(Self {
             api_url: client.get_api_url().to_owned(),

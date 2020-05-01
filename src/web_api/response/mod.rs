@@ -40,6 +40,7 @@ pub struct TwoFactorRequiredResponse {
     pub status: String,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize)]
 pub struct TwoFactorInfo {
     pub username: String,

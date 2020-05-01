@@ -70,16 +70,19 @@ impl Client {
     ///
     /// let client = Client::new();
     /// ```
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     #[doc(hidden)]
+    #[must_use]
     pub fn new_with_url(url: &str) -> Self {
         ClientBuilder::new().set_api_url(url).build()
     }
 
     #[doc(hidden)]
+    #[must_use]
     pub fn get_api_url(&self) -> &str {
         &self.api_url
     }
@@ -95,6 +98,10 @@ impl Client {
     ///
     /// //let some_user_info: UserInfos = client.user_infos("SomeUser").await?;
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the request fails on instagram api.
     pub async fn user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
         let endpoint = format!("{}/{}", self.api_url, username);
         let client = HttpClient::new();
@@ -125,19 +132,18 @@ impl Client {
     ///
     /// // let login_infos: LoginInfos = client.login(&creds).await?;
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if the request fails on instagram api.
+    /// Maybe due to an unknown error or a mistake in the credentials
     pub async fn login(
         &mut self,
         credentials: &Credentials<'_>,
     ) -> Result<AuthenticatedClient, ClientError> {
-        self._init_rollout_hash().await?;
+        self.init_rollout_hash().await?;
 
         let mut headers = headers::HeaderMap::new();
-
-        let _cookie = cookie::Cookie::build("ig_cb", "1")
-            .domain("www.instagram.com")
-            .path("/")
-            .secure(false)
-            .finish();
 
         headers.insert(headers::ACCEPT, HeaderValue::from_static("*/*"));
         headers.insert(headers::ACCEPT_LANGUAGE, HeaderValue::from_static("en-US"));
@@ -220,7 +226,7 @@ impl Client {
     // """Make a GET request to get the first csrf token and rhx_gis"""
     async fn init(&mut self) -> Result<(), ClientError> {
         let response = self
-            ._make_request(&format!("{}/", self.api_url), None)
+            .make_request(&format!("{}/", self.api_url), None)
             .await?;
         let body = response.text_with_charset("utf-8").await?;
 
@@ -252,11 +258,11 @@ impl Client {
         }
     }
 
-    async fn _init_rollout_hash(&mut self) -> Result<(), ClientError> {
+    async fn init_rollout_hash(&mut self) -> Result<(), ClientError> {
         self.init().await
     }
 
-    async fn _make_request(
+    async fn make_request(
         &mut self,
         url: &str,
         credentials: Option<Credentials<'_>>,
