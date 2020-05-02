@@ -1,6 +1,8 @@
 use crate::web_api::domain::LoginInfos;
+use crate::web_api::domain::UserFeed;
 use crate::web_api::domain::UserInfos;
-use serde::Deserialize;
+
+use serde::{Deserialize, Deserializer};
 
 impl std::convert::From<reqwest::Error> for UserInfosError {
     fn from(_error: reqwest::Error) -> Self {
@@ -17,6 +19,18 @@ pub enum UserInfosError {
 #[derive(Deserialize)]
 pub struct ApiResponse<T> {
     pub graphql: T,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GraphQLResponse<T> {
+    pub data: T,
+    pub status: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserFeedResponse {
+    #[serde(rename = "user", deserialize_with = "nested_user_feed")]
+    pub feed: UserFeed,
 }
 
 #[derive(Deserialize)]
@@ -60,4 +74,16 @@ pub struct PhoneVerificationSettings {
     pub resend_sms_delay_sec: i32,
     pub robocall_count_down_time_sec: i32,
     pub robocall_after_max_sms: bool,
+}
+
+fn nested_user_feed<'de, D>(deserializer: D) -> Result<UserFeed, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct A {
+        edge_owner_to_timeline_media: UserFeed,
+    }
+
+    A::deserialize(deserializer).map(|a| a.edge_owner_to_timeline_media)
 }

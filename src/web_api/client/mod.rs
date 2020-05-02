@@ -8,25 +8,27 @@ use reqwest::Error as HttpError;
 use reqwest::Response as HttpResponse;
 
 use crate::web_api::{
-    behaviour::FetchUserInfo,
-    credentials::Credentials,
-    domain::UserInfos,
-    error::ClientError,
-    response::{ApiResponse, LoginResponse, UserInfosError, UserInfosResponse},
+    behaviour::FetchUserFeed, behaviour::FetchUserFeedOptions, behaviour::FetchUserInfos,
+    credentials::Credentials, domain::UserFeed, domain::UserInfos, error::ClientError,
+    response::ApiResponse, response::GraphQLResponse, response::LoginResponse,
+    response::UserFeedResponse, response::UserInfosError, response::UserInfosResponse,
 };
 
 mod authenticated;
+mod behaviour;
 
 pub use authenticated::AuthenticatedClient;
 
-struct ClientBuilder<'a> {
+struct ClientBuilder<'a, 'b> {
     url: &'a str,
+    graphql_api_url: &'b str,
 }
 
-impl<'a> ClientBuilder<'a> {
+impl<'a, 'b> ClientBuilder<'a, 'b> {
     const fn new() -> Self {
         Self {
             url: "https://www.instagram.com",
+            graphql_api_url: "https://www.instagram.com/graphql/query",
         }
     }
 
@@ -36,9 +38,15 @@ impl<'a> ClientBuilder<'a> {
         self
     }
 
+    const fn set_graphql_api_url(mut self, url: &'b str) -> Self {
+        self.graphql_api_url = url;
+
+        self
+    }
     fn build(self) -> Client {
         Client {
             api_url: self.url.to_string(),
+            graphql_api_url: self.graphql_api_url.to_string(),
             csrf_token: None,
             init_csrf_token: None,
             rollout_hash: None,
@@ -52,29 +60,46 @@ impl<'a> ClientBuilder<'a> {
 #[derive(PartialEq, Debug)]
 pub struct Client {
     api_url: String,
+    graphql_api_url: String,
     csrf_token: Option<String>,
     init_csrf_token: Option<String>,
     rollout_hash: Option<String>,
 }
 
 #[async_trait]
-impl FetchUserInfo for Client {
-    /// Fetch user's informations
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use instagram::web_api::*;
-    ///
-    /// let client = Client::new();
-    ///
-    /// //let some_user_info: UserInfos = client.user_infos("SomeUser").await?;
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if the request fails on instagram api.
-    async fn user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
+#[allow(clippy::empty_line_after_outer_attr)]
+impl FetchUserFeed for Client {
+    async fn fetch_user_feed(
+        &self,
+        user_id: &str,
+        options: Option<FetchUserFeedOptions<'_, '_>>,
+    ) -> Result<UserFeed, ClientError> {
+        let client = HttpClient::new();
+
+        let options = options.unwrap_or_default().set_user_id(user_id);
+
+        let variables = serde_json::to_string(&options).unwrap();
+
+        let query = vec![
+            ("query_hash", "9dcf6e1a98bc7f6e92953d5a61027b98"),
+            ("variables", &variables),
+        ];
+
+        client
+            .get(&self.graphql_api_url)
+            .query(&query)
+            .send()
+            .await?
+            .json::<GraphQLResponse<UserFeedResponse>>()
+            .await
+            .map(|r| r.data.feed)
+            .map_err(Into::into)
+    }
+}
+
+#[async_trait]
+impl FetchUserInfos for Client {
+    async fn fetch_user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
         let endpoint = format!("{}/{}", self.api_url, username);
         let client = HttpClient::new();
 
@@ -89,6 +114,39 @@ impl FetchUserInfo for Client {
             .map_err(Into::into)
     }
 }
+
+// #[async_trait]
+// impl FetchUserFeed for Client {
+//     async fn fetch_user_feed(&self) -> Result<UserFeed, ClientError> {
+//         //     let client = HttpClient::new();
+
+//         //     let options = options.unwrap_or_default();
+//         //     let options = FetchUserFeedOptions::default();
+
+//         //     let variables = json!({
+//         //         "id": user_id,
+//         //         "first": options.count,
+//         //         "after": options.after
+//         //     })
+//         //     .to_string();
+
+//         //     let query = vec![
+//         //         ("query_hash", "9dcf6e1a98bc7f6e92953d5a61027b98"),
+//         //         ("variables", &variables),
+//         //     ];
+
+//         //     client
+//         //         .get(&self.graphql_api_url)
+//         //         .query(&query)
+//         //         .send()
+//         //         .await?
+//         //         .json::<GraphQLResponse<UserFeedResponse>>()
+//         //         .await
+//         //         .map(|r| r.data.feed)
+//         //         .map_err(Into::into)
+// Err(ClientError::HttpRequest)
+// }
+// }
 
 impl std::default::Default for Client {
     fn default() -> Self {
@@ -113,8 +171,11 @@ impl Client {
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_with_url(url: &str) -> Self {
-        ClientBuilder::new().set_api_url(url).build()
+    pub fn new_with_url(url: &str, graphql_api_url: &str) -> Self {
+        ClientBuilder::new()
+            .set_api_url(url)
+            .set_graphql_api_url(graphql_api_url)
+            .build()
     }
 
     #[doc(hidden)]

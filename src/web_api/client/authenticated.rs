@@ -1,9 +1,7 @@
-use super::Client;
-use crate::web_api::domain::LoginInfos;
-use crate::web_api::error::ClientError as Error;
-use async_trait::async_trait;
-
-use crate::web_api::{behaviour::FetchUserInfo, domain::UserInfos, response::UserInfosError};
+use crate::web_api::{
+    behaviour::FetchUserInfos, domain::LoginInfos, domain::UserInfos, error::ClientError,
+    response::UserInfosError, Client,
+};
 
 /// An authenticated Web client to access the api
 ///
@@ -20,7 +18,7 @@ impl AuthenticatedClient {
     /// # Errors
     ///
     /// Will return `Err` if login informations isnt validated.
-    pub fn from_login_infos(client: Client, _login_info: &LoginInfos) -> Result<Self, Error> {
+    pub fn from_login_infos(client: Client, _login_info: &LoginInfos) -> Result<Self, ClientError> {
         Ok(Self {
             base_client: client,
             csrf_token: None,
@@ -30,9 +28,9 @@ impl AuthenticatedClient {
     }
 }
 
-#[async_trait]
-impl FetchUserInfo for AuthenticatedClient {
-    async fn user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
-        self.base_client.user_infos(username).await
+#[async_trait::async_trait]
+impl FetchUserInfos for AuthenticatedClient {
+    async fn fetch_user_infos(&self, username: &str) -> Result<UserInfos, UserInfosError> {
+        self.base_client.fetch_user_infos(username).await
     }
 }
