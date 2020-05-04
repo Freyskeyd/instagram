@@ -31,8 +31,8 @@ async fn test_get_user_info() {
         .expect(1)
         .create();
 
-    let client = Client::new_with_url(&mockito::server_url());
-    let freyskeyd_infos = client.user_infos("Freyskeyd").await.unwrap();
+    let client = Client::new_with_url(&mockito::server_url(), "");
+    let freyskeyd_infos = client.fetch_user_infos("Freyskeyd").await.unwrap();
 
     m.assert();
 
@@ -45,8 +45,8 @@ async fn test_get_user_info() {
         .expect(1)
         .create();
 
-    let client = Client::new_with_url(&mockito::server_url());
-    let freyskeyd_infos = client.user_infos("Freyskeyd").await;
+    let client = Client::new_with_url(&mockito::server_url(), "");
+    let freyskeyd_infos = client.fetch_user_infos("Freyskeyd").await;
 
     assert!(freyskeyd_infos.is_err());
     m.assert();
@@ -72,7 +72,7 @@ async fn test_logged_in_2_fa() {
         .expect(1)
         .create();
 
-    let x = Client::new_with_url(&mockito::server_url())
+    let x = Client::new_with_url(&mockito::server_url(), "")
         .login(&get_credentials())
         .await;
 
@@ -111,11 +111,11 @@ async fn test_logged_in() {
         .expect(1)
         .create();
 
-    let client = Client::new_with_url(&mockito::server_url())
+    let client = Client::new_with_url(&mockito::server_url(), "")
         .login(&get_credentials())
         .await
         .unwrap();
-    let freyskeyd_infos = client.user_infos("Freyskeyd").await.unwrap();
+    let freyskeyd_infos = client.fetch_user_infos("Freyskeyd").await.unwrap();
 
     assert_eq!(freyskeyd_infos.username, "freyskeyd");
     assert_eq!(freyskeyd_infos.full_name, "FREYSKEYD");
@@ -123,6 +123,29 @@ async fn test_logged_in() {
     m_root.assert();
     m_login.assert();
     m_user_info.assert();
+}
+
+#[tokio::test]
+async fn test_user_feed() {
+    let _ = env_logger::try_init();
+    let fixture: String =
+        ::std::fs::read_to_string("tests/web_api_client/response_user_feed.json").unwrap();
+
+    let m_user_feed = mock("GET", "/")
+        .match_query(Matcher::Regex("query_hash=.*variables=.*".into()))
+        .with_status(200)
+        .with_body(&fixture)
+        .expect(1)
+        .create();
+
+    let user_feed = Client::new_with_url("", &mockito::server_url())
+        .fetch_user_feed("1234", None)
+        .await
+        .unwrap();
+
+    assert_eq!(user_feed.count, 147);
+
+    m_user_feed.assert();
 }
 
 fn get_credentials() -> Credentials<'static> {

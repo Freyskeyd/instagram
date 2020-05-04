@@ -6,10 +6,10 @@ use instagram::web_api::behaviour::*;
 
 #[test]
 fn behaviour() {
-    assert_impl!(FetchUserInfo: Client);
+    assert_impl!(FetchUserInfos: Client);
+    assert_impl!(FetchUserFeed: Client);
 
     // TODO implementation needed
-    assert_impl!(!FetchUserFeed: Client);
     assert_impl!(!FetchMediaInfo: Client);
     assert_impl!(!FetchMediaComments: Client);
     assert_impl!(!Search: Client);

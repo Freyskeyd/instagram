@@ -1,5 +1,5 @@
 #![deny(clippy::all)]
-#![deny(clippy::pedantic)]
+// #![deny(clippy::pedantic)]
 #![deny(clippy::nursery)]
 #![allow(clippy::module_name_repetitions)]
 // TODO: remove on new release of clippy that ship: https://github.com/rust-lang/rust-clippy/pull/5535

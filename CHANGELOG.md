@@ -8,6 +8,8 @@ We follow the [Semantic Versioning 2.0.0](http://semver.org/) format.
 
 ### Added
 
+- Add `fetch_user_infos`
+- Add `fetch_user_feed`
 - Introduce `behaviour` concept on client
 
 
