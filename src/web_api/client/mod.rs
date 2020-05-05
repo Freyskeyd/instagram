@@ -8,51 +8,23 @@ use reqwest::Error as HttpError;
 use reqwest::Response as HttpResponse;
 
 use crate::web_api::{
-    behaviour::FetchUserFeed, behaviour::FetchUserFeedOptions, behaviour::FetchUserInfos,
-    credentials::Credentials, domain::UserFeed, domain::UserInfos, error::ClientError,
-    response::ApiResponse, response::GraphQLResponse, response::LoginResponse,
-    response::UserFeedResponse, response::UserInfosError, response::UserInfosResponse,
+    behaviour::{FetchUserFeed, FetchUserInfos},
+    credentials::Credentials,
+    domain::{UserFeed, UserInfos},
+    error::ClientError,
+    options::FetchUserFeedOptions,
+    response::{
+        ApiResponse, GraphQLResponse, LoginResponse, UserFeedResponse, UserInfosError,
+        UserInfosResponse,
+    },
 };
 
 mod authenticated;
-mod behaviour;
+mod builder;
 
 pub use authenticated::AuthenticatedClient;
 
-struct ClientBuilder<'a, 'b> {
-    url: &'a str,
-    graphql_api_url: &'b str,
-}
-
-impl<'a, 'b> ClientBuilder<'a, 'b> {
-    const fn new() -> Self {
-        Self {
-            url: "https://www.instagram.com",
-            graphql_api_url: "https://www.instagram.com/graphql/query",
-        }
-    }
-
-    const fn set_api_url(mut self, url: &'a str) -> Self {
-        self.url = url;
-
-        self
-    }
-
-    const fn set_graphql_api_url(mut self, url: &'b str) -> Self {
-        self.graphql_api_url = url;
-
-        self
-    }
-    fn build(self) -> Client {
-        Client {
-            api_url: self.url.to_string(),
-            graphql_api_url: self.graphql_api_url.to_string(),
-            csrf_token: None,
-            init_csrf_token: None,
-            rollout_hash: None,
-        }
-    }
-}
+use builder::ClientBuilder;
 
 /// Web api entrypoint Client
 ///
@@ -115,39 +87,6 @@ impl FetchUserInfos for Client {
     }
 }
 
-// #[async_trait]
-// impl FetchUserFeed for Client {
-//     async fn fetch_user_feed(&self) -> Result<UserFeed, ClientError> {
-//         //     let client = HttpClient::new();
-
-//         //     let options = options.unwrap_or_default();
-//         //     let options = FetchUserFeedOptions::default();
-
-//         //     let variables = json!({
-//         //         "id": user_id,
-//         //         "first": options.count,
-//         //         "after": options.after
-//         //     })
-//         //     .to_string();
-
-//         //     let query = vec![
-//         //         ("query_hash", "9dcf6e1a98bc7f6e92953d5a61027b98"),
-//         //         ("variables", &variables),
-//         //     ];
-
-//         //     client
-//         //         .get(&self.graphql_api_url)
-//         //         .query(&query)
-//         //         .send()
-//         //         .await?
-//         //         .json::<GraphQLResponse<UserFeedResponse>>()
-//         //         .await
-//         //         .map(|r| r.data.feed)
-//         //         .map_err(Into::into)
-// Err(ClientError::HttpRequest)
-// }
-// }
-
 impl std::default::Default for Client {
     fn default() -> Self {
         ClientBuilder::new().build()
@@ -195,7 +134,7 @@ impl Client {
     ///
     /// let creds: Credentials = Credentials {
     ///     username: "user",
-    ///     password: "passw"
+    ///     password: "passw",
     /// };
     ///
     /// // let login_infos: LoginInfos = client.login(&creds).await?;

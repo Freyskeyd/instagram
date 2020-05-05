@@ -6,8 +6,7 @@ pub enum ClientError {
 }
 
 impl From<reqwest::Error> for ClientError {
-    fn from(e: reqwest::Error) -> Self {
-        println!("{:?}", e);
+    fn from(_e: reqwest::Error) -> Self {
         Self::HttpRequest
     }
 }

@@ -1,5 +1,6 @@
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
+mod deserializer;
 mod infos;
 
 pub use infos::LoginInfos;
@@ -8,7 +9,7 @@ pub use infos::UserInfos;
 #[derive(Debug, Deserialize)]
 pub struct UserFeed {
     pub count: i32,
-    #[serde(rename = "edges", deserialize_with = "nested_media")]
+    #[serde(rename = "edges", deserialize_with = "deserializer::nested_media")]
     pub medias: Vec<Media>,
     #[serde(rename = "page_info")]
     pub pagination_infos: PaginationInfos,
@@ -29,7 +30,10 @@ pub struct MediaDimensions {
 #[derive(Debug, Deserialize)]
 pub struct MediaComments {
     count: i32,
-    #[serde(rename = "edges", deserialize_with = "nested_media_comment")]
+    #[serde(
+        rename = "edges",
+        deserialize_with = "deserializer::nested_media_comment"
+    )]
     data: Vec<MediaComment>,
     #[serde(rename = "page_info")]
     pagination_infos: PaginationInfos,
@@ -83,7 +87,7 @@ pub struct Media {
 
     #[serde(
         rename = "edge_media_to_caption",
-        deserialize_with = "nested_media_caption"
+        deserialize_with = "deserializer::nested_media_caption"
     )]
     caption: Option<String>,
 
@@ -96,7 +100,7 @@ pub struct Media {
 
     #[serde(
         rename = "edge_media_preview_like",
-        deserialize_with = "nested_media_likes"
+        deserialize_with = "deserializer::nested_media_likes"
     )]
     like: i32,
     is_video: bool,
@@ -123,78 +127,4 @@ pub struct Media {
     viewer_has_saved: bool,
     viewer_has_saved_to_collection: bool,
     viewer_in_photo_of_you: bool,
-}
-
-fn nested_media_caption<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Debug, Deserialize)]
-    pub struct MediaCaptionList {
-        edges: Vec<MediaCaption>,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct MediaCaption {
-        node: MediaCaptionText,
-    }
-
-    #[derive(Debug, Deserialize)]
-    pub struct MediaCaptionText {
-        text: String,
-    }
-
-    MediaCaptionList::deserialize(deserializer)
-        .map(|mut a| a.edges.pop())
-        .map(|x| x.map(|x| x.node.text))
-}
-
-fn nested_media_likes<'de, D>(deserializer: D) -> Result<i32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Debug, Deserialize)]
-    pub struct MediaLike {
-        count: i32,
-    }
-
-    MediaLike::deserialize(deserializer).map(|a| a.count)
-}
-
-fn nested_media<'de, D>(deserializer: D) -> Result<Vec<Media>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Wrapper(MediaEdge);
-
-    #[derive(Debug, Deserialize)]
-    pub struct MediaEdge {
-        node: Media,
-    }
-
-    let v = Vec::deserialize(deserializer)?;
-
-    Ok(v.into_iter()
-        .map(|Wrapper(a)| a.node)
-        .collect::<Vec<Media>>())
-}
-
-fn nested_media_comment<'de, D>(deserializer: D) -> Result<Vec<MediaComment>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Wrapper(MediaEdge);
-
-    #[derive(Debug, Deserialize)]
-    pub struct MediaEdge {
-        node: MediaComment,
-    }
-
-    let v = Vec::deserialize(deserializer)?;
-
-    Ok(v.into_iter()
-        .map(|Wrapper(a)| a.node)
-        .collect::<Vec<MediaComment>>())
 }

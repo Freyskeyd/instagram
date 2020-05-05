@@ -7,7 +7,7 @@
 ///
 /// let my_creds: Credentials = Credentials {
 ///     username: "my_username",
-///     password: "my_password"
+///     password: "my_password",
 /// };
 /// ```
 pub struct Credentials<'a> {
